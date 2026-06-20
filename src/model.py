@@ -70,8 +70,8 @@ class GomokuNet(nn.Module):
         """Apply standard initialization rules for each layer type."""
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                # initialization the standard choice for layers that are followed by a ReLU activation.
-                nn.init.normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                # Kaiming normal is the standard choice for conv layers followed by ReLU.
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             elif isinstance(m, nn.BatchNorm2d):
                 # Start every batch-norm layer as an identity transform (scale 1, shift 0) so it does not distort the signal at the very start of training.
                 nn.init.constant_(m.weight, 1)

@@ -33,7 +33,7 @@ def check_blocking(game, row, col, player):
             r -= dr
             c -= dc
         # if the opponent had three or more stones lined up around this cell, placing a stone here counts as "blocking" their threat.
-        if count >=
+        if count >= 3:
             return True
     return False
 
@@ -79,7 +79,7 @@ def move_reward(game, row, col, player, blocked_threat):
     # so it is still preferred over losing.
     if game.winner == player:
         reward += 5.0
-    elif game.winner ==
+    elif game.winner == 3:
         reward += 0.3
 
     return reward
@@ -141,7 +141,7 @@ def evaluate_against_best(agent, args):
         # score 1 point for a challenger win, 0.5 for a draw, and 0 for a loss, which is the standard scoring used to compute a win rate that treats draws fairly.
         if winner == challenger_color:
             challenger_score += 1.0
-        elif winner ==
+        elif winner == 3:
             challenger_score += 0.5
 
     return challenger_score / max(args.eval_games, 1)
