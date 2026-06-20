@@ -16,7 +16,7 @@ This project implements a Gomoku AI system based on reinforcement learning. The 
 ### 1.2 Clone the Project
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/zhoulukai329-spec/Gomoku_Master_for_SOF106.git
 cd Gomoku_Master_for_SOF106
 ```
 
