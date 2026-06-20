@@ -1,50 +1,56 @@
 # Gomoku Master for SOF106
 
-本项目实现了一个基于强化学习的五子棋 AI 系统。当前代码库采用的是基于 `PPO` 的 actor-critic 智能体，配合自博弈训练流程与 `Pygame` 图形界面，支持模型训练、人机对弈和训练产物保存。
+This project implements a Gomoku AI system based on reinforcement learning. The current codebase uses a `PPO`-based actor-critic agent together with a self-play training pipeline and a `Pygame` GUI, supporting model training, human-vs-AI gameplay, and artifact persistence.
 
-## 1. 本地部署、训练与开始游戏
+## 1. Local Setup, Training, and Gameplay
 
-### 1.1 环境要求
+### 1.1 Environment Requirements
 
-- 推荐操作系统：Windows
-- 推荐 Python 版本：`Python 3.10+`
-- 主要依赖：
+- Recommended operating system: Windows
+- Recommended Python version: `Python 3.10+`
+- Main dependencies:
   - `numpy>=1.26`
   - `torch>=2.2`
   - `pygame>=2.5`
 
-### 1.2 克隆项目
+### 1.2 Clone the Project
 
 ```bash
 git clone <your-repository-url>
 cd Gomoku_Master_for_SOF106
 ```
 
-### 1.3 创建虚拟环境
+### 1.3 Create a Virtual Environment
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate # use venv
+
+conda activate <env-name> # use conda env
+
 python -m pip install --upgrade pip
 ```
 
-### 1.4 安装依赖
+### 1.4 Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-如果你的环境中 `torch` 没有成功安装，请根据本机的 CPU 或 CUDA 配置，从 PyTorch 官网选择对应版本安装：
+If `torch` is not installed successfully in your environment, install the appropriate PyTorch build for your CPU or CUDA setup from the official website:
 
 - [PyTorch Get Started](https://pytorch.org/get-started/locally/)
 
-### 1.5 项目结构
+### 1.5 Project Structure
 
 ```text
 Gomoku_Master_for_SOF106/
 ├─ README.md
 ├─ requirements.txt
 └─ src/
+   ├─ artifacts/
+   │   └─ weights/ # model weight files(not uploaded online)
+   │   └─ logs/ # training logs and summary files(not uploaded online)
    ├─ agent.py
    ├─ gomoku_game.py
    ├─ gui.py
@@ -54,76 +60,63 @@ Gomoku_Master_for_SOF106/
    └─ training_logger.py
 ```
 
-### 1.6 如何在本地训练
+### 1.6 How to Train Locally
 
-训练入口为 `src/train.py`。由于训练脚本直接导入同级模块，因此建议在 `src` 目录下执行。
+The training entry point is `src/train.py`. Since the training script imports sibling modules directly, it is recommended to run it from the `src` directory.
+
+Common training commands:
 
 ```bash
 cd src
-python train.py
-```
-
-常用训练命令示例：
-
-```bash
 python train.py --episodes 2000 --size 15
-python train.py --episodes 500 --run-name exp01
-python train.py --resume --run-name exp01
-python train.py --resume --run-name exp01 --weights-path artifacts\weights\exp01_latest.pth
+python train.py --episodes 500 --run-name train01
+python train.py --resume --run-name train01
+python train.py --resume --run-name train01 --weights-path artifacts\weights\train01_latest.pth
 ```
 
-常用参数说明：
+Common arguments:
 
-- `--episodes`：自博弈训练总局数
-- `--size`：棋盘大小，默认值为 `15`
-- `--run-name`：本次训练的自定义名称
-- `--resume`：从已有检查点继续训练
-- `--weights-path`：显式指定权重文件路径
+- `--episodes`: total number of self-play episodes
+- `--size`: board size, default is `15`
+- `--run-name`: custom name for the current training run
+- `--resume`: continue training from an existing checkpoint
+- `--weights-path`: explicitly specify the weights file path
 
-### 1.7 训练输出内容
+### 1.7 Training Outputs
 
-训练启动后，项目会自动在 `src/artifacts/` 下生成相关产物：
+After training starts, the project automatically generates artifacts under `src/artifacts/`:
 
-- `src/artifacts/weights/`：模型权重文件
-- `src/artifacts/logs/`：训练过程日志与总结文件
+- `src/artifacts/weights/`: model weight files
+- `src/artifacts/logs/`: training logs and summary files
 
-典型文件包括：
+Typical files include:
 
-- `artifacts\weights\ppo_rl_latest.pth`：默认运行名下的最新权重
-- `artifacts\weights\ppo_rl_best.pth`：评估效果最好的权重
-- `artifacts\logs\<run-name>_training.csv`：逐局训练指标日志
-- `artifacts\logs\<run-name>_summary.json`：一次训练完成后的总结信息
+- `artifacts\weights\ppo_rl_latest.pth`: the latest weights for the default run name
+- `artifacts\weights\ppo_rl_best.pth`: the best-performing weights according to evaluation
+- `artifacts\logs\<run-name>_training.csv`: per-episode training metrics
+- `artifacts\logs\<run-name>_summary.json`: summary information after one training run finishes
 
-### 1.8 训练完成后如何开始游戏
+### 1.8 How to Start the Game After Training
 
-游戏图形界面入口为 `src/gui.py`，同样建议在 `src` 目录下执行。
-
-如果你使用默认运行名完成训练：
+The graphical gameplay entry point is `src/gui.py`, and it is also recommended to run it from the `src` directory.
 
 ```bash
 cd src
-python gui.py
+python gui.py --weights-path <path to the weight file>
 ```
 
-如果你希望加载指定权重：
+Notes:
 
-```bash
-cd src
-python gui.py --weights-path artifacts\weights\exp01_latest.pth
-```
+- If `--weights-path` is not provided, the GUI will try to load the default **latest weights**.
+- If no valid weights file is found, the GUI may still open, but the AI may not function correctly.
+- A recommended local workflow is:
+  1. create and activate a virtual environment
+  2. install dependencies
+  3. run the training script
+  4. confirm that weight files have been generated
+  5. launch the GUI and play against the trained AI
 
-说明：
-
-- 如果未传入 `--weights-path`，GUI 会尝试加载默认的最新权重。
-- 如果没有找到有效权重文件，GUI 可能仍然可以打开，但 AI 不一定能够正常工作。
-- 推荐的本地流程如下：
-  1. 创建并激活虚拟环境
-  2. 安装依赖
-  3. 运行训练脚本
-  4. 确认权重文件已生成
-  5. 启动 GUI，与训练后的 AI 对战
-
-## 2. 项目简短报告
+## 2. Short Project Report
 
 ### a) Title
 
@@ -131,60 +124,59 @@ python gui.py --weights-path artifacts\weights\exp01_latest.pth
 
 ### b) Abstract
 
-本项目开发了一个能够通过强化学习进行训练，并可用于人机对弈的五子棋智能系统。系统由五子棋规则引擎、策略价值神经网络、基于 PPO 的训练智能体以及 Pygame 图形界面组成。项目最终形成了一条完整流程，支持自博弈训练、模型检查点保存、与历史最佳模型对抗评估，以及训练完成后的交互式游戏体验。
+This project develops an intelligent Gomoku system that can be trained through reinforcement learning and then used for human-vs-AI gameplay. The system consists of a Gomoku rule engine, a policy-value neural network, a PPO-based training agent, and a Pygame graphical interface. The final outcome is a complete pipeline that supports self-play training, model checkpoint saving, evaluation against the historically best model, and interactive gameplay after training.
 
 ### c) Introduction
 
-我们选择五子棋作为本项目的研究主题，是因为它规则清晰、策略空间丰富，同时适合作为强化学习算法的实验对象。对本专业和研究方向而言，五子棋能够很好地连接人工智能中的多个核心问题，包括棋盘状态表示、动作决策、神经网络建模以及智能体与环境交互式学习。
+We selected Gomoku as the topic of this project because it has clear rules, a rich strategic space, and is well suited as an experimental task for reinforcement learning algorithms. In terms of our field of study and interests, Gomoku connects several core topics in artificial intelligence, including board-state representation, action selection, neural network modeling, and learning through repeated interaction between an agent and its environment.
 
-本项目的意义在于，它不仅实现了一个可训练的游戏 AI，也展示了如何将算法模块、规则模块、日志模块和图形界面模块整合为一个完整的软件系统。这使得项目同时具有算法实践价值和工程实现价值。
+The significance of this project lies in the fact that it not only implements a trainable game AI, but also demonstrates how algorithm modules, rule modules, logging modules, and GUI modules can be integrated into a complete software system. This gives the project both algorithmic value and engineering value.
 
 ### d) Methodology
 
-项目采用模块化的方法进行设计与实现，主要流程如下：
+The project is designed and implemented in a modular way, with the main workflow as follows:
 
-1. 实现五子棋规则引擎，用于维护棋盘状态、合法落子、胜负判定、历史记录以及黑棋禁手规则。
-2. 构建神经网络模型，对棋盘状态进行编码，并输出策略分布与局面价值。
-3. 实现基于 PPO 的强化学习智能体，用于采样动作、记录轨迹、更新参数与保存模型。
-4. 构建自博弈训练流程，使智能体通过不断对弈持续优化策略。
-5. 构建 Pygame 图形界面，使用户能够在本地与训练后的模型进行对弈。
-6. 通过日志与总结文件记录训练过程，便于后续分析模型表现。
+1. Implement a Gomoku rule engine to maintain board state, legal moves, win/loss checking, move history, and black forbidden-move rules.
+2. Build a neural network model that encodes the board state and outputs a policy distribution and state value.
+3. Implement a PPO-based reinforcement learning agent for action sampling, trajectory recording, parameter updates, and model saving.
+4. Build a self-play training loop so the agent can continuously improve through repeated gameplay.
+5. Build a Pygame graphical interface so users can play against the trained model locally.
+6. Record the training process through logs and summary files for later analysis.
 
-在信息识别、筛选、处理和分析方面，我们主要基于仓库中的实际实现模块进行整理。当前项目结构将规则逻辑、模型逻辑、训练逻辑、存储日志逻辑和界面逻辑分离，有助于降低模块耦合度并提升可维护性。
+For information identification, selection, processing, and analysis, we mainly organized the report based on the actual implemented modules in the repository. The current project structure separates rule logic, model logic, training logic, storage/logging logic, and interface logic, which helps reduce coupling and improve maintainability.
 
-团队分工可以按模块职责描述如下：
+Team responsibilities can be described by module ownership as follows:
 
-- 游戏规则与棋盘逻辑：`gomoku_game.py`
-- 神经网络模型与输入编码：`model.py`
-- 强化学习智能体：`agent.py`
-- 训练与评估流程：`train.py`
-- 图形界面与人机交互：`gui.py`
-- 训练产物路径管理与日志记录：`storage.py` 和 `training_logger.py`
+- Game rules and board logic: `gomoku_game.py`
+- Neural network model and input encoding: `model.py`
+- Reinforcement learning agent: `agent.py`
+- Training and evaluation pipeline: `train.py`
+- Graphical interface and human-computer interaction: `gui.py`
+- Artifact path management and logging: `storage.py` and `training_logger.py`
 
-如果你们后续需要提交正式课程报告，可以将上述“按模块职责分工”的内容替换为实际成员姓名及其对应任务。
+If you later need a formal course submission, the module-based division above can be replaced with actual team member names and their assigned tasks.
 
 ### e) Validation/Verification
 
-项目主要通过以下方式对结果进行验证：
+The project validates its results mainly in the following ways:
 
-1. 在训练过程中，当前模型会周期性地与历史最佳模型进行对抗评估，用于验证训练是否带来了性能提升。
-2. 训练过程中的奖励、策略损失、价值损失、熵、胜率以及评估胜率等指标会被写入 CSV 日志文件，便于观察训练趋势。
-3. 项目会保存 latest 和 best 两类权重文件，便于断点续训、结果对比与回归验证。
-4. 训练完成后，可以通过图形界面进行人机对弈，从实际使用角度验证模型是否具备基本的对局能力。
+1. During training, the current model is periodically evaluated against the historically best model to verify whether training improves performance.
+2. Metrics such as reward, policy loss, value loss, entropy, win rate, and evaluation win rate are written to CSV logs so training trends can be observed.
+3. The project saves both `latest` and `best` weights, which supports resumed training, result comparison, and regression checking.
+4. After training, users can play against the model through the graphical interface to validate whether it has acquired basic gameplay ability from a practical perspective.
 
-当前仓库中尚未包含独立的自动化测试套件，因此验证方式主要依赖训练期评估、日志分析以及人机对战体验。不过，这种“自博弈评估 + 日志记录 + 交互式验证”的组合，仍能为模型效果提供较直接的证据。
+The current repository does not yet include a standalone automated test suite, so validation mainly relies on in-training evaluation, log analysis, and human-vs-AI gameplay experience. Even so, this combination of self-play evaluation, log recording, and interactive verification still provides direct evidence of model performance.
 
 ### f) Conclusion
 
-总体而言，本项目完成了一个较完整的五子棋 AI 工作流，涵盖了规则模拟、PPO 自博弈训练、模型评估、训练产物管理以及图形化人机对弈界面。项目的主要成果不仅是得到一个可训练的 AI 模型，更重要的是搭建了一个从训练到使用都可落地运行的完整系统。
+Overall, this project completes a relatively full Gomoku AI workflow, covering rule simulation, PPO self-play training, model evaluation, training artifact management, and a graphical human-vs-AI interface. The main achievement is not only obtaining a trainable AI model, but also building a complete system that can run from training to actual use.
 
-从工程角度看，项目体现了模块化设计的重要性。规则、学习算法、训练流程和界面逻辑被拆分到不同文件中，结构相对清晰，便于维护和后续扩展。通过本项目，我们进一步积累了在强化学习、神经网络建模、训练验证以及 AI 应用集成方面的实践经验。
+From an engineering perspective, the project highlights the importance of modular design. Rules, learning algorithms, training flow, and interface logic are separated into different files, making the structure relatively clear and easier to maintain and extend. Through this project, we further gained practical experience in reinforcement learning, neural network modeling, training validation, and AI application integration.
 
-未来可以继续改进的方向包括：
+Possible future improvements include:
 
-- 增加自动化单元测试与集成测试
-- 引入更强的评估基线与更系统的对照实验
-- 支持更多可配置的棋盘大小与游戏模式
-- 优化 GUI 交互体验与对局反馈信息
-- 在训练流程中加入更强的搜索策略或混合决策方法
-
+- adding automated unit tests and integration tests
+- introducing stronger evaluation baselines and more systematic comparison experiments
+- supporting more configurable board sizes and game modes
+- improving GUI interaction and in-game feedback
+- adding stronger search strategies or hybrid decision methods into the training pipeline
