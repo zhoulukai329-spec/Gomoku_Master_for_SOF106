@@ -7,6 +7,7 @@ import time
 import pygame
 
 from agent import GomokuAgent
+from bootstrap_training import DEFAULT_BOOTSTRAP_EPISODES, ensure_weights_for_play
 from gomoku_game import GomokuGame
 from storage import DEFAULT_RUN_NAME, resolve_weights_path
 
@@ -392,10 +393,39 @@ def parse_args():
     """Parse the optional weights path passed from the command line."""
     parser = argparse.ArgumentParser(description="Launch the Gomoku GUI")
     parser.add_argument("--weights-path", type=str, default="")
+    parser.add_argument("--run-name", type=str, default=DEFAULT_RUN_NAME)
+    parser.add_argument(
+        "--bootstrap-episodes",
+        type=int,
+        default=DEFAULT_BOOTSTRAP_EPISODES,
+        help="Self-play episodes to run before the GUI when weights are missing",
+    )
+    parser.add_argument(
+        "--force-train",
+        action="store_true",
+        help="Run self-play training before opening the GUI even if weights exist",
+    )
+    parser.add_argument(
+        "--skip-training",
+        action="store_true",
+        help="Open the GUI without automatic self-play training",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    gui = GomokuGUI(weights_path=args.weights_path)
+    weights_path = args.weights_path
+    if not args.skip_training:
+        weights_path, trained = ensure_weights_for_play(
+            weights_path=args.weights_path,
+            run_name=args.run_name,
+            size=BOARD_SIZE,
+            episodes=args.bootstrap_episodes,
+            force_train=args.force_train,
+        )
+        if trained:
+            print(f"[Bootstrap] Ready for play with weights: {weights_path}")
+
+    gui = GomokuGUI(weights_path=weights_path)
     gui.run()
