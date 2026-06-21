@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile source files
+        run: python -m compileall src
+
+      - name: Run tactical move smoke tests
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          from agent import GomokuAgent
+          from gomoku_game import GomokuGame
+
+          agent = GomokuAgent(size=15)
+
+          winning_game = GomokuGame()
+          winning_game.board[7, 3:7] = 1
+          winning_game.current_player = 1
+          winning_move = agent.select_action(
+              winning_game.board,
+              winning_game.current_player,
+              winning_game.get_legal_moves(),
+              deterministic=True,
+          )
+          assert winning_move in {(7, 2), (7, 7)}, winning_move
+
+          blocking_game = GomokuGame()
+          blocking_game.board[8, 4:8] = 2
+          blocking_game.current_player = 1
+          blocking_move = agent.select_action(
+              blocking_game.board,
+              blocking_game.current_player,
+              blocking_game.get_legal_moves(),
+              deterministic=True,
+          )
+          assert blocking_move in {(8, 3), (8, 8)}, blocking_move
+          PY
