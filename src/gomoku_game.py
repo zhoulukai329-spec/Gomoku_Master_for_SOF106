@@ -144,6 +144,13 @@ class GomokuGame:
             self.board[row, col] = 0
             return True
 
+        # An exact five-in-a-row is a legal winning move for black. Check it
+        # before double-four and double-three so a real finishing move does
+        # not get filtered out of the legal-move list by secondary threats.
+        if self._creates_exact_five(row, col):
+            self.board[row, col] = 0
+            return False
+
         # Double four: the move creates two separate four-in-a-row threats
         # at once, which is illegal because it is an unstoppable win setup.
         if self._check_double_four(row, col):
@@ -180,6 +187,25 @@ class GomokuGame:
                 c -= dc
             # Any line longer than five stones is an illegal overline for black.
             if count > 5:
+                return True
+        return False
+
+    def _creates_exact_five(self, row, col):
+        """Return True when black has exactly five stones in one direction."""
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        for dr, dc in directions:
+            count = 1
+            r, c = row + dr, col + dc
+            while 0 <= r < self.size and 0 <= c < self.size and self.board[r, c] == 1:
+                count += 1
+                r += dr
+                c += dc
+            r, c = row - dr, col - dc
+            while 0 <= r < self.size and 0 <= c < self.size and self.board[r, c] == 1:
+                count += 1
+                r -= dr
+                c -= dc
+            if count == 5:
                 return True
         return False
 
