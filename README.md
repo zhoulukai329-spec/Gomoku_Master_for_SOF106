@@ -142,7 +142,7 @@ The project does **not** use every common AI category. It mainly uses reinforcem
 - `Legal Action Masking`: blocks illegal moves before the model chooses an action
 - `Temperature Scaling`: controls how random or sharp the move choice is
 - `Deterministic Inference`: used in evaluation and GUI play for stronger and more stable moves
-- `Tactical Move Heuristic`: checks urgent one-move wins and blocks before trusting raw policy scores
+- `Tactical Move Heuristic`: masks urgent one-move wins and blocks before trusting raw policy scores
 
 #### D. Optimization and Stability Methods
 
@@ -177,7 +177,7 @@ Board state
 -> State encoding
 -> Policy-value neural network
 -> Legal move mask
--> Tactical move check for urgent wins and blocks
+-> Tactical move mask for urgent wins and blocks
 -> Move selection
 -> Game engine applies move
 -> Reward is computed
@@ -270,7 +270,7 @@ The training logic can be broken into the following steps:
 2. The board is turned into a 3-channel tensor.
 3. The old frozen policy outputs move logits and a state value.
 4. Illegal moves are masked out.
-5. A move is sampled during training.
+5. Forced tactical wins and blocks are masked first, then a move is sampled during training.
 6. The game engine applies the move.
 7. A reward is computed from the result of the move.
 8. State, action, log-probability, reward, and terminal flag are stored.
@@ -501,8 +501,10 @@ The reward function includes:
 - a `center bonus`, which prefers flexible central moves
 - an `alignment bonus`, which prefers longer local connections
 - a `blocking bonus`, when a move stops an opponent threat
-- a large terminal reward for winning
+- a stronger terminal reward for actually finishing the game
 - a small neutral reward for a draw
+
+The alignment reward is intentionally smaller than the terminal reward, so the agent is encouraged to complete a win instead of only building attractive four-in-a-row shapes.
 
 #### Why Reward Shaping Is Needed
 
@@ -543,6 +545,7 @@ During training:
 
 - the opening uses more exploration
 - the endgame uses a lower temperature
+- immediate winning moves and required blocks are treated as forced tactical actions
 
 This gives a balance between trying new ideas and finishing games more decisively.
 
