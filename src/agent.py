@@ -9,6 +9,7 @@ import torch.optim as optim
 from torch.distributions import Categorical
 
 from model import GomokuNet, preprocess_board
+from tactical_ai import choose_strategic_move
 
 
 class PPOAgent:
@@ -98,7 +99,16 @@ class PPOAgent:
 
         # choose the move. Deterministic mode (used for the GUI and evaluation matches) always takes the single most likely move. Stochastic mode (used during training) samples from the full distribution so the agent keeps exploring different lines of play.
         if deterministic:
-            action = torch.argmax(masked_logits)
+            tactical_move = choose_strategic_move(
+                board,
+                current_player,
+                legal_moves,
+                policy_logits=scaled_logits.detach().cpu().numpy(),
+            )
+            action = torch.tensor(
+                tactical_move[0] * self.size + tactical_move[1],
+                device=self.device,
+            )
             dist = Categorical(logits=masked_logits)
             logprob = dist.log_prob(action)
         else:
