@@ -65,23 +65,32 @@ def move_reward(game, row, col, player, blocked_threat):
     # that "placing any legal stone at all" is already a good outcome.
     center = (game.size - 1) / 2.0
     distance = abs(row - center) + abs(col - center)
-    center_bonus = max(0.0, 1.0 - distance / max(center * 2.0, 1.0)) * 0.02
+    center_bonus = max(0.0, 1.0 - distance / max(center * 2.0, 1.0)) * 0.015
+
+    if game.winner == player:
+        return 2.50 + center_bonus
+    if game.winner == 3:
+        return 0.05
 
     # reward only genuinely useful structure-building moves rather than every move equally.
     alignment = max_alignment(game.board, row, col, player, game.size)
-    alignment_bonus = max(0, alignment - 1) * 0.06
-    if alignment >= 4:
-        alignment_bonus += 0.20
+    alignment_bonus = 0.0
+    if alignment == 2:
+        alignment_bonus = 0.04
+    elif alignment == 3:
+        alignment_bonus = 0.12
+    elif alignment == 4:
+        alignment_bonus = 0.24
     reward = center_bonus + alignment_bonus
 
     # extra reward for defensive play, i.e. interrupting a dangerous opponent line before it becomes a winning threat.
     if blocked_threat:
-        reward += 0.30
+        reward += 0.42
 
     return reward
 
 
-def apply_outcome_rewards(agent, episode_transitions, winner, decay=0.92):
+def apply_outcome_rewards(agent, episode_transitions, winner, decay=0.90):
     """Push the final game result back onto the moves that created it."""
     if not episode_transitions:
         return 0.0
@@ -99,7 +108,7 @@ def apply_outcome_rewards(agent, episode_transitions, winner, decay=0.92):
     for buffer_index, player in episode_transitions:
         per_player_indices[player].append(buffer_index)
 
-    outcome_values = {winner: 3.0, 3 - winner: -3.0}
+    outcome_values = {winner: 5.0, 3 - winner: -5.0}
     for player, indices in per_player_indices.items():
         base_bonus = outcome_values[player]
         for offset, buffer_index in enumerate(reversed(indices)):
