@@ -142,6 +142,7 @@ The project does **not** use every common AI category. It mainly uses reinforcem
 - `Legal Action Masking`: blocks illegal moves before the model chooses an action
 - `Temperature Scaling`: controls how random or sharp the move choice is
 - `Deterministic Inference`: used in evaluation and GUI play for stronger and more stable moves
+- `Tactical Move Heuristic`: checks urgent one-move wins and blocks before trusting raw policy scores
 
 #### D. Optimization and Stability Methods
 
@@ -163,9 +164,9 @@ To keep the technical story accurate, it is also important to say what is **not*
 - No generative AI model
 - No transformer model
 - No Monte Carlo Tree Search (MCTS)
-- No minimax search with handcrafted game-tree expansion
+- No full minimax search with handcrafted game-tree expansion
 
-This means the current AI mainly learns from repeated play experience, not from expert game records or a search engine.
+This means the neural policy mainly learns from repeated play experience, while a small tactical layer handles immediate wins and blocks during deterministic play.
 
 ### 2.2 How the Whole AI Pipeline Works
 
@@ -176,6 +177,7 @@ Board state
 -> State encoding
 -> Policy-value neural network
 -> Legal move mask
+-> Tactical move check for urgent wins and blocks
 -> Move selection
 -> Game engine applies move
 -> Reward is computed
@@ -550,6 +552,7 @@ During evaluation and GUI play:
 
 - the project uses deterministic inference
 - the GUI also uses a very low temperature (`0.05`)
+- a tactical layer first checks whether the AI can win immediately or must block an opponent's immediate win
 
 This is like telling the model:
 
@@ -646,6 +649,7 @@ To keep the explanation honest, the current algorithm design also has limits:
 
 - it does not use expert demonstrations
 - it does not use MCTS or deep search
+- it only uses a shallow tactical heuristic for immediate wins and blocks
 - it depends strongly on reward design
 - self-play may need many episodes before strong strategy appears
 - short evaluation matches can make progress look noisy
