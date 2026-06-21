@@ -53,19 +53,9 @@ def choose_strategic_move(
         if (center, center) in legal_moves:
             return center, center
 
-    own_wins = find_immediate_wins(board, current_player, legal_moves)
-    if own_wins:
-        return _best_by_heuristic(board, current_player, own_wins)
-
-    opponent = 3 - current_player
-    opponent_wins = set(find_immediate_wins(
-        board,
-        opponent,
-        _legal_moves_for_player(board, opponent),
-    ))
-    blocking_moves = [move for move in legal_moves if move in opponent_wins]
-    if blocking_moves:
-        return _best_by_heuristic(board, current_player, blocking_moves)
+    forced_moves = find_forced_moves(board, current_player, legal_moves)
+    if forced_moves:
+        return _best_by_heuristic(board, current_player, forced_moves)
 
     heuristic_scores = np.array(
         [score_move(board, move, current_player) for move in legal_moves],
@@ -99,6 +89,24 @@ def find_immediate_wins(board, player, candidate_moves):
         if _move_wins(board, row, col, player):
             wins.append((row, col))
     return wins
+
+
+def find_forced_moves(board, current_player, legal_moves):
+    """Return urgent moves that should override policy exploration."""
+    board = np.asarray(board)
+    legal_moves = list(legal_moves)
+
+    own_wins = find_immediate_wins(board, current_player, legal_moves)
+    if own_wins:
+        return own_wins
+
+    opponent = 3 - current_player
+    opponent_wins = set(find_immediate_wins(
+        board,
+        opponent,
+        _legal_moves_for_player(board, opponent),
+    ))
+    return [move for move in legal_moves if move in opponent_wins]
 
 
 def score_move(board, move, player):
