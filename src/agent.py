@@ -9,7 +9,7 @@ import torch.optim as optim
 from torch.distributions import Categorical
 
 from model import GomokuNet, preprocess_board
-from tactical_ai import choose_strategic_move
+from tactical_ai import choose_strategic_move, find_forced_moves
 
 
 class PPOAgent:
@@ -93,9 +93,19 @@ class PPOAgent:
         for row, col in legal_moves:
             mask[row * self.size + col] = 0.0
 
+        # A direct win, or a move that blocks the opponent's direct win, is not
+        # optional tactical flavor. Treat it as a temporary action mask so both
+        # training rollouts and GUI play stop drifting away from forced moves.
+        forced_moves = find_forced_moves(board, current_player, legal_moves)
+        selection_mask = mask
+        if forced_moves:
+            selection_mask = torch.full((self.size * self.size,), -1e9, device=self.device)
+            for row, col in forced_moves:
+                selection_mask[row * self.size + col] = 0.0
+
         # apply temperature scaling before softmax. A temperature below 1 sharpens the distribution, and a temperature above 1 flattens it. The floor of 1e-3 avoids a division by zero.
         temperature = max(float(temperature), 1e-3)
-        masked_logits = (scaled_logits + mask) / temperature
+        masked_logits = (scaled_logits + selection_mask) / temperature
 
         # choose the move. Deterministic mode (used for the GUI and evaluation matches) always takes the single most likely move. Stochastic mode (used during training) samples from the full distribution so the agent keeps exploring different lines of play.
         if deterministic:
@@ -121,7 +131,7 @@ class PPOAgent:
             self.buffer["states"].append(state)
             self.buffer["actions"].append(action.item())
             self.buffer["logprobs"].append(logprob.item())
-            self.buffer["legal_masks"].append(mask.detach().cpu().numpy().astype(np.float32))
+            self.buffer["legal_masks"].append(selection_mask.detach().cpu().numpy().astype(np.float32))
             self.buffer["temperatures"].append(temperature)
             self.buffer["players"].append(current_player)
 
