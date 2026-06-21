@@ -51,6 +51,9 @@ class PPOAgent:
             "states": [],
             "actions": [],
             "logprobs": [],
+            "legal_masks": [],
+            "temperatures": [],
+            "players": [],
             "rewards": [],
             "is_terminals": [],
         }
@@ -91,14 +94,15 @@ class PPOAgent:
 
         # apply temperature scaling before softmax. A temperature below 1 sharpens the distribution, and a temperature above 1 flattens it. The floor of 1e-3 avoids a division by zero.
         temperature = max(float(temperature), 1e-3)
-        probs = torch.softmax((scaled_logits + mask) / temperature, dim=-1)
+        masked_logits = (scaled_logits + mask) / temperature
 
         # choose the move. Deterministic mode (used for the GUI and evaluation matches) always takes the single most likely move. Stochastic mode (used during training) samples from the full distribution so the agent keeps exploring different lines of play.
         if deterministic:
-            action = torch.argmax(probs)
-            logprob = torch.log(probs[action].clamp_min(1e-8))
+            action = torch.argmax(masked_logits)
+            dist = Categorical(logits=masked_logits)
+            logprob = dist.log_prob(action)
         else:
-            dist = Categorical(probs=probs)
+            dist = Categorical(logits=masked_logits)
             action = dist.sample()
             logprob = dist.log_prob(action)
 
@@ -107,6 +111,9 @@ class PPOAgent:
             self.buffer["states"].append(state)
             self.buffer["actions"].append(action.item())
             self.buffer["logprobs"].append(logprob.item())
+            self.buffer["legal_masks"].append(mask.detach().cpu().numpy().astype(np.float32))
+            self.buffer["temperatures"].append(temperature)
+            self.buffer["players"].append(current_player)
 
         # convert the flat 0..size*size-1 action index back into (row, col) board coordinates for the caller to use.
         row, col = divmod(action.item(), self.size)
@@ -132,14 +139,22 @@ class PPOAgent:
         # turn the raw per-step rewards into discounted returns by walking the rollout backward from the end. Whenever a step is a terminal step (the game ended), the running total resets to zero first, which correctly separates multiple games that were stored back-to-back in the same buffer.
         returns = []
         discounted_reward = 0.0
-        for reward, is_terminal in zip(
+        next_player = None
+        for reward, is_terminal, player in zip(
             reversed(self.buffer["rewards"]),
             reversed(self.buffer["is_terminals"]),
+            reversed(self.buffer["players"]),
         ):
             if is_terminal:
                 discounted_reward = 0.0
-            discounted_reward = reward + self.gamma * discounted_reward
+                next_player = None
+            elif next_player is not None and player != next_player:
+                discounted_reward = -self.gamma * discounted_reward
+            else:
+                discounted_reward = self.gamma * discounted_reward
+            discounted_reward = reward + discounted_reward
             returns.insert(0, discounted_reward)
+            next_player = player
 
         # normalize the returns to roughly zero mean and unit variance. This keeps the value loss and advantage scale stable regardless of how raw reward magnitudes change during training.
         returns = torch.tensor(returns, dtype=torch.float32, device=self.device)
@@ -158,6 +173,16 @@ class PPOAgent:
             dtype=torch.float32,
             device=self.device,
         )
+        old_legal_masks = torch.tensor(
+            np.asarray(self.buffer["legal_masks"]),
+            dtype=torch.float32,
+            device=self.device,
+        )
+        old_temperatures = torch.tensor(
+            self.buffer["temperatures"],
+            dtype=torch.float32,
+            device=self.device,
+        ).unsqueeze(-1)
 
         stats = {"policy_loss": 0.0, "value_loss": 0.0, "entropy": 0.0}
 
@@ -168,7 +193,8 @@ class PPOAgent:
             state_values = state_values.squeeze(-1)
 
             # recompute the log-probability of the actions that were actually taken, under the *current* network weights (these will differ from old_logprobs as training proceeds).
-            dist = Categorical(logits=logits)
+            masked_logits = (logits + old_legal_masks) / old_temperatures.clamp_min(1e-3)
+            dist = Categorical(logits=masked_logits)
             logprobs = dist.log_prob(old_actions)
             entropy = dist.entropy().mean()
 

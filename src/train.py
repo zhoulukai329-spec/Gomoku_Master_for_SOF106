@@ -61,28 +61,53 @@ def max_alignment(board, row, col, player, size):
 
 def move_reward(game, row, col, player, blocked_threat):
     """Build a dense reward so early training gets useful feedback."""
-    # small bonus for playing closer to the center, since central moves are usually more flexible and this nudges early random play toward more sensible openings.
+    # keep the per-move reward small and selective, so the policy does not learn
+    # that "placing any legal stone at all" is already a good outcome.
     center = (game.size - 1) / 2.0
     distance = abs(row - center) + abs(col - center)
-    center_bonus = max(0.0, 1.0 - distance / max(center * 2.0, 1.0)) * 0.05
+    center_bonus = max(0.0, 1.0 - distance / max(center * 2.0, 1.0)) * 0.02
 
-    # reward longer connected lines so the network starts to value building toward a five-in-a-row, not just placing stones at random.
-    alignment_bonus = max_alignment(game.board, row, col, player, game.size) * 0.08
-    reward = 0.02 + center_bonus + alignment_bonus
+    # reward only genuinely useful structure-building moves rather than every move equally.
+    alignment = max_alignment(game.board, row, col, player, game.size)
+    alignment_bonus = max(0, alignment - 1) * 0.06
+    if alignment >= 4:
+        alignment_bonus += 0.20
+    reward = center_bonus + alignment_bonus
 
     # extra reward for defensive play, i.e. interrupting a dangerous opponent line before it becomes a winning threat.
     if blocked_threat:
-        reward += 0.25
-
-    # the dominant signal by far is the actual game outcome —
-    # winning gives a large reward, and a draw gives a small positive one
-    # so it is still preferred over losing.
-    if game.winner == player:
-        reward += 5.0
-    elif game.winner == 3:
-        reward += 0.3
+        reward += 0.30
 
     return reward
+
+
+def apply_outcome_rewards(agent, episode_transitions, winner, decay=0.92):
+    """Push the final game result back onto the moves that created it."""
+    if not episode_transitions:
+        return 0.0
+
+    total_added = 0.0
+    if winner == 3:
+        draw_bonus = 0.15
+        for offset, (buffer_index, _) in enumerate(reversed(episode_transitions)):
+            bonus = draw_bonus * (decay ** offset)
+            agent.buffer["rewards"][buffer_index] += bonus
+            total_added += bonus
+        return total_added
+
+    per_player_indices = {1: [], 2: []}
+    for buffer_index, player in episode_transitions:
+        per_player_indices[player].append(buffer_index)
+
+    outcome_values = {winner: 3.0, 3 - winner: -3.0}
+    for player, indices in per_player_indices.items():
+        base_bonus = outcome_values[player]
+        for offset, buffer_index in enumerate(reversed(indices)):
+            bonus = base_bonus * (decay ** offset)
+            agent.buffer["rewards"][buffer_index] += bonus
+            total_added += bonus
+
+    return total_added
 
 
 def play_match(black_agent, white_agent, size, temperature):
@@ -203,6 +228,7 @@ def train(args):
         game.reset()
         episode_reward = 0.0
         steps = 0
+        episode_transitions = []
 
         # play moves until the game reaches a terminal state. 
         while game.winner == 0:
@@ -245,8 +271,12 @@ def train(args):
             reward = move_reward(game, row, col, current_player, blocked_threat)
             is_terminal = game.winner != 0
             agent.record_reward(reward, is_terminal)
+            episode_transitions.append((len(agent.buffer["actions"]) - 1, current_player))
             episode_reward += reward
             steps += 1
+
+        episode_winner = game.winner if game.winner != 0 else 3
+        episode_reward += apply_outcome_rewards(agent, episode_transitions, episode_winner)
 
         # run a PPO update once enough episodes have accumulated in the buffer (controlled by --update-every), and always run one final update on the very last episode so no collected data is left unused at the end of training.
         if episode % args.update_every == 0 or episode == args.episodes:
@@ -276,7 +306,7 @@ def train(args):
             {
                 "episode": episode,
                 "steps": steps,
-                "winner": game.winner if game.winner != 0 else 3,
+                "winner": episode_winner,
                 "episode_reward": episode_reward,
                 "policy_loss": last_update_stats["policy_loss"],
                 "value_loss": last_update_stats["value_loss"],
