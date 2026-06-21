@@ -49,6 +49,15 @@ jobs:
           )
           assert winning_move in {(7, 2), (7, 7)}, winning_move
 
+          rollout_move = agent.select_action(
+              winning_game.board,
+              winning_game.current_player,
+              winning_game.get_legal_moves(),
+              deterministic=False,
+              record=True,
+          )
+          assert rollout_move in {(7, 2), (7, 7)}, rollout_move
+
           blocking_game = GomokuGame()
           blocking_game.board[8, 4:8] = 2
           blocking_game.current_player = 1
@@ -59,4 +68,10 @@ jobs:
               deterministic=True,
           )
           assert blocking_move in {(8, 3), (8, 8)}, blocking_move
+
+          exact_five_game = GomokuGame()
+          exact_five_game.board[6, 3:7] = 1
+          exact_five_game.current_player = 1
+          ok, error = exact_five_game.make_move(6, 7)
+          assert ok and exact_five_game.winner == 1, (ok, error, exact_five_game.winner)
           PY
