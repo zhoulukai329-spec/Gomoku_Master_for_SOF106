@@ -96,25 +96,36 @@ Typical files include:
 - `artifacts\logs\<run-name>_training.csv`: per-episode training metrics
 - `artifacts\logs\<run-name>_summary.json`: summary information after one training run finishes
 
-### 1.8 How to Start the Game After Training
+### 1.8 How to Start the Game
 
-The graphical gameplay entry point is `src/gui.py`, and it is also recommended to run it from the `src` directory.
+The graphical gameplay entry point is `src/gui.py`, and it is also recommended to run it from the `src` directory. If no usable weights are found, the GUI launcher now runs self-play training first and only opens the human-vs-AI window after weights have been saved.
 
 ```bash
 cd src
-python gui.py --weights-path <path to the weight file>
+python gui.py
+```
+
+Useful gameplay commands:
+
+```bash
+python gui.py --bootstrap-episodes 1000
+python gui.py --force-train --bootstrap-episodes 2000
+python gui.py --skip-training --weights-path artifacts\weights\ppo_rl_latest.pth
 ```
 
 Notes:
 
-- If `--weights-path` is not provided, the GUI will try to load the default **latest weights**.
-- If no valid weights file is found, the GUI may still open, but the AI may not function correctly.
+- If `--weights-path` is not provided, the GUI uses the default `artifacts\weights\ppo_rl_latest.pth`.
+- If that file does not exist, `python gui.py` automatically runs self-play training before opening the board.
+- `--bootstrap-episodes` controls how many self-play episodes are used for this automatic pre-game training.
+- `--force-train` continues self-play training even when weights already exist.
+- `--skip-training` keeps the old behavior and opens the GUI without automatic training.
 - A recommended local workflow is:
   1. create and activate a virtual environment
   2. install dependencies
-  3. run the training script
-  4. confirm that weight files have been generated
-  5. launch the GUI and play against the trained AI
+  3. run `python gui.py`
+  4. wait for self-play training to finish if weights are missing
+  5. play against the trained AI
 
 ## 2. AI Methods Used in This Project
 
