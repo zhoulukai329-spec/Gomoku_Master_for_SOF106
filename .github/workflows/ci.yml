@@ -34,7 +34,17 @@ jobs:
         run: |
           python - <<'PY'
           from agent import GomokuAgent
+          from bootstrap_training import build_bootstrap_args
           from gomoku_game import GomokuGame
+
+          bootstrap_args = build_bootstrap_args(
+              size=15,
+              episodes=2,
+              run_name="ci_smoke",
+              resume_path=__import__("pathlib").Path("missing.pth"),
+          )
+          assert bootstrap_args.episodes == 2
+          assert bootstrap_args.run_name == "ci_smoke"
 
           agent = GomokuAgent(size=15)
 
