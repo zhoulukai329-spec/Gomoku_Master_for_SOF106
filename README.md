@@ -41,7 +41,71 @@ If `torch` is not installed successfully in your environment, install the approp
 
 - [PyTorch Get Started](https://pytorch.org/get-started/locally/)
 
-### 1.5 Project Structure
+
+### 1.5 How to Train Locally
+
+The training entry point is `src/train.py`. Since the training script imports sibling modules directly, it is recommended to run it from the `src` directory.
+
+Common training commands:
+
+```bash
+cd src
+python train.py --resume --run-name <run-name> --weights-path <weights-file-path>
+```
+
+Common arguments:
+
+- `--episodes`: total number of self-play episodes
+- `--size`: board size, default is `15`
+- `--run-name`: custom name for the current training run
+- `--resume`: continue training from an existing checkpoint
+- `--weights-path`: explicitly specify the weights file path
+
+### 1.6 Training Outputs
+
+After training starts, the project automatically generates artifacts under `src/artifacts/`:
+
+- `src/artifacts/weights/`: model weight files
+- `src/artifacts/logs/`: training logs and summary files
+
+Typical files include:
+
+- `artifacts\weights\train01_latest.pth`: the latest weights for the default run name
+- `artifacts\weights\train01_best.pth`: the best-performing weights according to evaluation
+- `artifacts\logs\<run-name>_training.csv`: per-episode training metrics
+- `artifacts\logs\<run-name>_summary.json`: summary information after one training run finishes
+
+### 1.7 How to Start the Game
+
+The graphical gameplay entry point is `src/gui.py`, and it is also recommended to run it from the `src` directory. If no usable weights are found, the GUI launcher now runs self-play training first and only opens the human-vs-AI window after weights have been saved.
+
+```bash
+cd src
+python gui.py --weights-path <weights-file-path> # play with trained AI
+```
+
+Useful gameplay commands:
+
+```bash
+python gui.py --bootstrap-episodes 1000
+python gui.py --force-train --bootstrap-episodes 2000
+```
+
+Notes:
+
+- If `--weights-path` is not provided, the GUI uses the default `artifacts\weights\train01_latest.pth`.
+- If that file does not exist, `python gui.py` automatically runs self-play training before opening the board.
+- `--bootstrap-episodes` controls how many self-play episodes are used for this automatic pre-game training.
+- `--force-train` continues self-play training even when weights already exist.
+- `--skip-training` keeps the old behavior and opens the GUI without automatic training.
+- A recommended local workflow is:
+  1. create and activate a virtual environment
+  2. install dependencies
+  3. run `python gui.py`
+  4. wait for self-play training to finish if weights are missing
+  5. play against the trained AI
+
+### 1.8 Project Structure
 
 ```text
 Gomoku_Master_for_SOF106/
@@ -59,73 +123,6 @@ Gomoku_Master_for_SOF106/
    ├─ train.py
    └─ training_logger.py
 ```
-
-### 1.6 How to Train Locally
-
-The training entry point is `src/train.py`. Since the training script imports sibling modules directly, it is recommended to run it from the `src` directory.
-
-Common training commands:
-
-```bash
-cd src
-python train.py --episodes 2000 --size 15
-python train.py --episodes 500 --run-name train01
-python train.py --resume --run-name train01
-python train.py --resume --run-name train01 --weights-path artifacts\weights\train01_latest.pth
-```
-
-Common arguments:
-
-- `--episodes`: total number of self-play episodes
-- `--size`: board size, default is `15`
-- `--run-name`: custom name for the current training run
-- `--resume`: continue training from an existing checkpoint
-- `--weights-path`: explicitly specify the weights file path
-
-### 1.7 Training Outputs
-
-After training starts, the project automatically generates artifacts under `src/artifacts/`:
-
-- `src/artifacts/weights/`: model weight files
-- `src/artifacts/logs/`: training logs and summary files
-
-Typical files include:
-
-- `artifacts\weights\ppo_rl_latest.pth`: the latest weights for the default run name
-- `artifacts\weights\ppo_rl_best.pth`: the best-performing weights according to evaluation
-- `artifacts\logs\<run-name>_training.csv`: per-episode training metrics
-- `artifacts\logs\<run-name>_summary.json`: summary information after one training run finishes
-
-### 1.8 How to Start the Game
-
-The graphical gameplay entry point is `src/gui.py`, and it is also recommended to run it from the `src` directory. If no usable weights are found, the GUI launcher now runs self-play training first and only opens the human-vs-AI window after weights have been saved.
-
-```bash
-cd src
-python gui.py
-```
-
-Useful gameplay commands:
-
-```bash
-python gui.py --bootstrap-episodes 1000
-python gui.py --force-train --bootstrap-episodes 2000
-python gui.py --skip-training --weights-path artifacts\weights\ppo_rl_latest.pth
-```
-
-Notes:
-
-- If `--weights-path` is not provided, the GUI uses the default `artifacts\weights\ppo_rl_latest.pth`.
-- If that file does not exist, `python gui.py` automatically runs self-play training before opening the board.
-- `--bootstrap-episodes` controls how many self-play episodes are used for this automatic pre-game training.
-- `--force-train` continues self-play training even when weights already exist.
-- `--skip-training` keeps the old behavior and opens the GUI without automatic training.
-- A recommended local workflow is:
-  1. create and activate a virtual environment
-  2. install dependencies
-  3. run `python gui.py`
-  4. wait for self-play training to finish if weights are missing
-  5. play against the trained AI
 
 ## 2. AI Methods Used in This Project
 
