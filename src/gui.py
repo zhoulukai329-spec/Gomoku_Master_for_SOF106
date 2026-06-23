@@ -105,11 +105,6 @@ class GomokuGUI:
         self.winning_seq = []
         self.thinking    = False
 
-        # Replay mode reuses the move history of the completed game.
-        self.replay_mode = False
-        self.replay_idx  = 0
-        self.replay_hist = []
-
         self._build_ui()
 
     def reload_weights(self):
@@ -141,11 +136,10 @@ class GomokuGUI:
             # Capture the current layout cursor and append one button.
             self.btns.append(Button(x, y, dw, dh, label, cb))
 
-        add("New Game", self.reset_game);           y += dh + gap
-        add("Undo", self.undo_move);                y += dh + gap
-        add("Reload Weights", self.reload_weights); y += dh + gap
+        add("New Game", self.reset_game);            y += dh + gap
+        add("Undo", self.undo_move);                 y += dh + gap
+        add("Reload Weights", self.reload_weights);  y += dh + gap
         add(self._first_label(), self.toggle_first); y += dh + gap
-        add("Replay", self.start_replay);           y += dh + gap
 
         self._btn_first = self.btns[3]
 
@@ -165,31 +159,19 @@ class GomokuGUI:
         self.game.reset()
         self.game_over   = False
         self.winning_seq = []
-        self.replay_mode = False
-        self.replay_hist = []
         self.agent_error = self.agent_error or ""
         if self.ai_col == 1:
             self._do_ai_move()
 
     def undo_move(self):
         """Undo one human move and one AI move together."""
-        if self.game_over or self.replay_mode:
+        if self.game_over:
             return
 
         self.game.undo_move()
         self.game.undo_move()
         self.game_over = False
         self.winning_seq = []
-
-    def start_replay(self):
-        """Enter replay mode by resetting the board and reusing move history."""
-        if not self.game.history:
-            return
-        self.replay_hist = list(self.game.history)
-        self.game.reset()
-        self.replay_mode = True
-        self.replay_idx  = 0
-        self.game_over   = False
 
     def _do_ai_move(self):
         """Ask the neural agent for one move and apply it to the board."""
@@ -328,10 +310,6 @@ class GomokuGUI:
         status_line = self.sm_font.render(self.agent_error[:24], True, C_LABEL)
         self.screen.blit(status_line, (sx + 4, WIN_H - 76))
 
-        if self.replay_mode:
-            rt = self.sm_font.render("REPLAY  <- -> navigate", True, C_THINKING)
-            self.screen.blit(rt, (sx + 4, WIN_H - 40))
-
         pygame.display.flip()
 
     def run(self):
@@ -342,23 +320,8 @@ class GomokuGUI:
                     pygame.quit()
                     sys.exit()
 
-                # Replay mode uses the saved history instead of live player input.
-                if self.replay_mode and ev.type == pygame.KEYDOWN:
-                    if ev.key == pygame.K_RIGHT and self.replay_idx < len(self.replay_hist):
-                        r, c, _ = self.replay_hist[self.replay_idx]
-                        self.game.make_move(r, c)
-                        self.replay_idx += 1
-                        if self.game.winner:
-                            self.game_over   = True
-                            self.winning_seq = self.game.get_winning_sequence()
-                    elif ev.key == pygame.K_LEFT and self.replay_idx > 0:
-                        self.game.undo_move()
-                        self.replay_idx -= 1
-                        self.game_over   = False
-                        self.winning_seq = []
-
                 # Live mode lets the human place a stone with a left click.
-                if (not self.game_over and not self.replay_mode
+                if (not self.game_over
                         and ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1):
                     mx, my = ev.pos
                     half = GRID_WIDTH // 2
@@ -381,7 +344,7 @@ class GomokuGUI:
                                 time.sleep(0.05)
                                 self._do_ai_move()
 
-                # Sidebar buttons remain active in both live and replay modes.
+                # Sidebar buttons remain active throughout the live match.
                 for btn in self.btns:
                     btn.handle(ev)
 

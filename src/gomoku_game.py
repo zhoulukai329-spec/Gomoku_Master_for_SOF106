@@ -21,7 +21,7 @@ class GomokuGame:
         # no move has been played yet, so there is no "last move" marker.
         self.last_move = None
         # history stores every (row, col, player) move in order,
-        # which is what powers both undo_move() and the replay feature in the GUI.
+        # which is what powers undo_move() and move-count displays in the GUI.
         self.history = []
         # 0 = game still in progress, 1 = black won, 2 = white won, 3 = draw.
         self.winner = 0
