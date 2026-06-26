@@ -121,7 +121,10 @@ Gomoku_Master_for_SOF106/
    ├─ model.py
    ├─ storage.py
    ├─ train.py
+   ├─ bootstrap_training.py
+   ├─ tactical_ai.py
    └─ training_logger.py
+
 ```
 
 ## 2. AI Methods Used in This Project
