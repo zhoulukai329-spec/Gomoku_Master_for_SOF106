@@ -127,6 +127,61 @@ Gomoku_Master_for_SOF106/
 
 ```
 
+### 1.9 Build a Local Windows Release Package
+
+This repository now includes a release build script at `scripts/build_release.ps1`.
+It keeps packaging concerns separate from gameplay and training logic:
+
+- runtime resources such as `bg_china.png` are loaded from the bundled app image
+- writable artifacts such as weights and logs are stored next to the packaged `.exe`
+- if a `.pth` file exists under `src/artifacts/weights/`, the newest `*_best.pth` (or newest `.pth`) is copied into the release bundle as `artifacts\weights\ppo_rl_latest.pth`
+
+Local build steps:
+
+```powershell
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install pyinstaller
+
+.\scripts\build_release.ps1 -Version v1.0.0
+```
+
+Optional:
+
+```powershell
+.\scripts\build_release.ps1 -Version v1.0.0 -WeightsPath .\src\artifacts\weights\train08_best.pth
+```
+
+Build outputs:
+
+- `dist\release\Gomoku_Master_v1.0.0\`: unpacked release folder
+- `dist\release\Gomoku_Master_v1.0.0.zip`: upload-ready archive
+- `dist\release\Gomoku_Master_v1.0.0.sha256`: checksum file
+
+### 1.10 Publish a GitHub Release from a Tag
+
+The repository now includes `.github/workflows/release.yml`.
+When you push a tag matching `v*`, GitHub Actions will:
+
+1. install Python dependencies
+2. run compile and smoke checks
+3. build `GomokuMaster.exe` with `PyInstaller`
+4. package the executable, README, and default weights
+5. create a GitHub Release and upload the `.zip` and `.sha256` assets
+
+Typical release flow:
+
+```bash
+git add .
+git commit -m "Prepare release automation"
+git push origin main
+
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+After the workflow succeeds, open the repository's Releases page on GitHub and you will see the generated release package attached automatically.
+
 ## 2. AI Methods Used in This Project
 
 This section explains the full AI stack used in the project. It starts from the big picture, then goes into the core methods one by one. The goal is to stay technically correct while still being easy to follow for readers who are new to AI.

@@ -1,10 +1,12 @@
 from datetime import datetime
 from pathlib import Path
 
+from runtime_paths import app_root, artifacts_root
 
-# Point every saved artifact to folders inside the project root.
-PROJECT_ROOT = Path(__file__).resolve().parent
-ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+
+# Point saved artifacts to a writable runtime directory.
+PROJECT_ROOT = app_root()
+ARTIFACTS_DIR = artifacts_root()
 WEIGHTS_DIR = ARTIFACTS_DIR / "weights"
 LOGS_DIR = ARTIFACTS_DIR / "logs"
 

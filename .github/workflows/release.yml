@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Compile source files
+        run: python -m compileall src
+
+      - name: Run tactical move smoke tests
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          from agent import GomokuAgent
+          from bootstrap_training import build_bootstrap_args
+          from gomoku_game import GomokuGame
+
+          bootstrap_args = build_bootstrap_args(
+              size=15,
+              episodes=2,
+              run_name="release_smoke",
+              resume_path=__import__("pathlib").Path("missing.pth"),
+          )
+          assert bootstrap_args.episodes == 2
+          assert bootstrap_args.run_name == "release_smoke"
+
+          agent = GomokuAgent(size=15)
+
+          winning_game = GomokuGame()
+          winning_game.board[7, 3:7] = 1
+          winning_game.current_player = 1
+          winning_move = agent.select_action(
+              winning_game.board,
+              winning_game.current_player,
+              winning_game.get_legal_moves(),
+              deterministic=True,
+          )
+          assert winning_move in {(7, 2), (7, 7)}, winning_move
+          PY
+
+      - name: Build release package
+        shell: pwsh
+        run: |
+          ./scripts/build_release.ps1 -Version "${{ github.ref_name }}"
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/release/*.zip
+            dist/release/*.sha256
+          generate_release_notes: true

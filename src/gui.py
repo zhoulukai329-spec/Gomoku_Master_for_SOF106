@@ -3,13 +3,13 @@
 import argparse
 import sys
 import time
-import os
 
 import pygame
 
 from agent import GomokuAgent
 from bootstrap_training import DEFAULT_BOOTSTRAP_EPISODES, ensure_weights_for_play
 from gomoku_game import GomokuGame
+from runtime_paths import resource_path
 from storage import DEFAULT_RUN_NAME, resolve_weights_path
 
 # Fixed layout values keep drawing code easy to read and adjust.
@@ -108,11 +108,7 @@ class GomokuGUI:
 
         self.bg_image = None
         try:
-
-            base_path = os.path.dirname(os.path.abspath(__file__))
-            img_path = os.path.join(base_path, "bg_china.png")
-
-            img = pygame.image.load(img_path).convert()
+            img = pygame.image.load(str(resource_path("bg_china.png"))).convert()
             self.bg_image = pygame.transform.smoothscale(img, (WIN_W, WIN_H))
             self.bg_image.set_alpha(120)
         except Exception as e:
