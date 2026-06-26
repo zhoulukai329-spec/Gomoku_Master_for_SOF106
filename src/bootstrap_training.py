@@ -3,6 +3,7 @@
 from argparse import Namespace
 from shutil import copy2
 
+from runtime_paths import bundled_default_weights_path
 from storage import DEFAULT_RUN_NAME, latest_weights_path, resolve_weights_path
 from train import train
 
@@ -49,6 +50,13 @@ def ensure_weights_for_play(
     """Train by self-play when no playable weights are available."""
     target_path = resolve_weights_path(weights_path, run_name)
     if target_path.exists() and not force_train:
+        return target_path, False
+
+    bundled_path = bundled_default_weights_path()
+    if bundled_path and not target_path.exists() and not force_train:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        copy2(bundled_path, target_path)
+        print(f"[Bootstrap] Seeded playable weights from bundled release asset: {bundled_path.name}")
         return target_path, False
 
     latest_path = latest_weights_path(run_name)

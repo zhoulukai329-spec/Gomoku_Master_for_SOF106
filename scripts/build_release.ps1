@@ -49,6 +49,7 @@ $stageDir = Join-Path $releaseRootDir $releaseName
 $zipPath = Join-Path $releaseRootDir "$releaseName.zip"
 $hashPath = Join-Path $releaseRootDir "$releaseName.sha256"
 $exeName = "GomokuMaster.exe"
+$releaseExePath = Join-Path $releaseRootDir "GomokuMaster_$Version.exe"
 
 if (Test-Path $pyInstallerWorkDir) {
     Remove-Item -Path $pyInstallerWorkDir -Recurse -Force
@@ -65,20 +66,31 @@ if (Test-Path $zipPath) {
 if (Test-Path $hashPath) {
     Remove-Item -Path $hashPath -Force
 }
+if (Test-Path $releaseExePath) {
+    Remove-Item -Path $releaseExePath -Force
+}
 
 $weightsToBundle = Resolve-ReleaseWeightsPath -SourceDir $srcDir -ExplicitPath $WeightsPath
+$pyInstallerArgs = @(
+    "-m", "PyInstaller",
+    "--noconfirm",
+    "--clean",
+    "--onefile",
+    "--name", "GomokuMaster",
+    "--distpath", $pyInstallerDistDir,
+    "--workpath", $pyInstallerWorkDir,
+    "--specpath", $pyInstallerWorkDir,
+    "--paths", $srcDir,
+    "--add-data", "$srcDir\bg_china.png;."
+)
 
-python -m PyInstaller `
-    --noconfirm `
-    --clean `
-    --onefile `
-    --name GomokuMaster `
-    --distpath $pyInstallerDistDir `
-    --workpath $pyInstallerWorkDir `
-    --specpath $pyInstallerWorkDir `
-    --paths $srcDir `
-    --add-data "$srcDir\bg_china.png;." `
-    "$srcDir\gui.py"
+if ($weightsToBundle) {
+    $pyInstallerArgs += @("--add-data", "$weightsToBundle;defaults")
+}
+
+$pyInstallerArgs += "$srcDir\gui.py"
+
+& python @pyInstallerArgs
 
 $builtExe = Join-Path $pyInstallerDistDir $exeName
 if (-not (Test-Path $builtExe)) {
@@ -89,13 +101,14 @@ New-Item -Path $stageDir -ItemType Directory -Force | Out-Null
 New-Item -Path (Join-Path $stageDir "artifacts\weights") -ItemType Directory -Force | Out-Null
 
 Copy-Item -Path $builtExe -Destination (Join-Path $stageDir $exeName)
+Copy-Item -Path $builtExe -Destination $releaseExePath
 Copy-Item -Path (Join-Path $repoRoot "README.md") -Destination (Join-Path $stageDir "README.md")
 
 if ($weightsToBundle) {
     Copy-Item `
         -Path $weightsToBundle `
         -Destination (Join-Path $stageDir "artifacts\weights\ppo_rl_latest.pth")
-    Write-Host "Bundled weights: $weightsToBundle"
+    Write-Host "Embedded weights into exe: $weightsToBundle"
 } else {
     Write-Warning "No .pth file found under src\artifacts\weights. The packaged app will self-train on first launch."
 }
@@ -106,5 +119,6 @@ $hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -Path $hashPath -Value "$hash *$(Split-Path -Path $zipPath -Leaf)"
 
 Write-Host "Release folder: $stageDir"
+Write-Host "Release exe: $releaseExePath"
 Write-Host "Release zip: $zipPath"
 Write-Host "SHA256 file: $hashPath"

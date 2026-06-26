@@ -35,3 +35,19 @@ def artifacts_root():
     if override:
         return Path(override).expanduser().resolve()
     return app_root() / "artifacts"
+
+
+def bundled_default_weights_path():
+    """Return the bundled default weights file when one exists."""
+    defaults_dir = resource_path("defaults")
+    if not defaults_dir.exists():
+        return None
+
+    named_default = defaults_dir / "ppo_rl_latest.pth"
+    if named_default.exists():
+        return named_default
+
+    candidates = sorted(defaults_dir.glob("*.pth"))
+    if candidates:
+        return candidates[0]
+    return None

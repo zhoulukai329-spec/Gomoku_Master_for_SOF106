@@ -130,11 +130,12 @@ Gomoku_Master_for_SOF106/
 ### 1.9 Build a Local Windows Release Package
 
 This repository now includes a release build script at `scripts/build_release.ps1`.
-It keeps packaging concerns separate from gameplay and training logic:
+It keeps packaging concerns separate from gameplay and training logic while also supporting a beginner-friendly single-file release:
 
 - runtime resources such as `bg_china.png` are loaded from the bundled app image
 - writable artifacts such as weights and logs are stored next to the packaged `.exe`
-- if a `.pth` file exists under `src/artifacts/weights/`, the newest `*_best.pth` (or newest `.pth`) is copied into the release bundle as `artifacts\weights\ppo_rl_latest.pth`
+- if a `.pth` file exists under `src/artifacts/weights/`, the newest `*_best.pth` (or newest `.pth`) is embedded into the single-file `.exe`
+- on first launch, the packaged app copies that embedded default model into the local writable `artifacts\weights\` directory automatically
 
 Local build steps:
 
@@ -154,6 +155,7 @@ Optional:
 
 Build outputs:
 
+- `dist\release\GomokuMaster_v1.0.0.exe`: beginner-friendly single-file game download
 - `dist\release\Gomoku_Master_v1.0.0\`: unpacked release folder
 - `dist\release\Gomoku_Master_v1.0.0.zip`: upload-ready archive
 - `dist\release\Gomoku_Master_v1.0.0.sha256`: checksum file
@@ -165,9 +167,18 @@ When you push a tag matching `v*`, GitHub Actions will:
 
 1. install Python dependencies
 2. run compile and smoke checks
-3. build `GomokuMaster.exe` with `PyInstaller`
-4. package the executable, README, and default weights
-5. create a GitHub Release and upload the `.zip` and `.sha256` assets
+3. build a single-file `GomokuMaster.exe` with `PyInstaller`
+4. embed the default playable weights into that `.exe`
+5. package the executable, README, and fallback zip
+6. create a GitHub Release and upload the `.exe`, `.zip`, and `.sha256` assets
+
+For non-technical users, the recommended download is the direct `.exe` file from the GitHub Release page. They can download it and double-click to start the game.
+
+Notes for real-world Windows distribution:
+
+- because the `.exe` is not code-signed, Windows SmartScreen may show a warning on first run
+- if that happens, the user may need to click `More info` -> `Run anyway`
+- this is normal for unsigned indie desktop apps distributed through GitHub Releases
 
 Typical release flow:
 
