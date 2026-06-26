@@ -2,6 +2,9 @@
 
 This project implements a Gomoku AI system based on reinforcement learning. The current codebase uses a `PPO`-based actor-critic agent together with a self-play training pipeline and a `Pygame` GUI, supporting model training, human-vs-AI gameplay, and artifact persistence.
 
+## 0. How to play
+Go to release page to the latest version and download the .exe file. Double click the file to play the game.
+
 ## 1. Local Setup, Training, and Gameplay
 
 ### 1.1 Environment Requirements
